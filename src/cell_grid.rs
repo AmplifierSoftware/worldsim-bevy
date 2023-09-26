@@ -10,16 +10,15 @@ pub struct CellGridPlugin;
     0 = black,
     1 = white
 
+    ---------------------------
+    we ignore basically everything above this line because i implimented it differently
+
     use noise to get this value
     assign it to the cell
     profit
 
-    and yes lyndon, yo wrote this not a ai
+    ---------------------------
 */
-struct Cell {
-    posision: Vec3,
-    value: f32,
-}
 
 enum CellState {
     Dead,
@@ -30,14 +29,21 @@ struct Grid {
     cells: Vec<Vec<Cell>>,
 }
 impl Grid {
-    fn create_noise_grid(res: u32, space: f32, seed: u64, octaves: i32, freq: f32) -> Grid {
+    fn create_noise_grid(
+        width: u32,
+        height: u32,
+        space: f32,
+        seed: u64,
+        octaves: i32,
+        freq: f32,
+    ) -> Grid {
         let mut cells = Vec::new();
 
         //noise let here
 
-        for x in 0..res {
+        for x in 0..width {
             let mut rows = Vec::new();
-            for y in 0..res {
+            for y in 0..height {
                 let new_x = x as f32 * space + 1.0;
                 let new_y = y as f32 * space + 1.0;
 
@@ -46,7 +52,7 @@ impl Grid {
                 noise.set_fractal_octaves(octaves);
                 noise.set_frequency(freq);
 
-                let value = noise.get_noise(new_x / res as f32, new_y / res as f32);
+                let value = noise.get_noise(new_x / width as f32, new_y / height as f32);
 
                 // adjust noise params
 
@@ -59,7 +65,10 @@ impl Grid {
         Grid { cells }
     }
 }
-
+struct Cell {
+    posision: Vec3,
+    value: f32,
+}
 impl Cell {
     fn new(pos: Vec3, val: f32) -> Self {
         Self {
@@ -72,17 +81,29 @@ impl Cell {
 fn noise_grid(mut commands: Commands, asst: Res<AssetServer>) {
     let grass = asst.load("grass.png");
     let water = asst.load("water.png");
+    let sand = asst.load("sand.png");
 
-    let grid = Grid::create_noise_grid(200, 16.0, 11234, 20, 0.07);
+    let grid = Grid::create_noise_grid(500, 500, 16.0, 72452, 30, 0.07);
     for row in grid.cells.iter() {
         for cell in row.iter() {
-            if cell.value > 0.2 {
+            if cell.value > 0.25 {
                 commands.spawn(SpriteBundle {
                     sprite: Sprite {
                         custom_size: Some(Vec2::new(16.0, 16.0)),
                         ..default()
                     },
                     texture: grass.clone(),
+                    transform: Transform::from_translation(cell.posision),
+                    ..Default::default()
+                });
+            }
+            if cell.value >= 0.23 {
+                commands.spawn(SpriteBundle {
+                    sprite: Sprite {
+                        custom_size: Some(Vec2::new(16.0, 16.0)),
+                        ..default()
+                    },
+                    texture: sand.clone(),
                     transform: Transform::from_translation(cell.posision),
                     ..Default::default()
                 });
