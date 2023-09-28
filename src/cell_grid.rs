@@ -52,11 +52,23 @@ impl Grid {
                 noise.set_fractal_octaves(octaves);
                 noise.set_frequency(freq);
 
-                let value = noise.get_noise(new_x / width as f32, new_y / height as f32);
+                let mut p_noise = FastNoise::seeded(seed + 3);
+                p_noise.set_noise_type(NoiseType::PerlinFractal);
+                p_noise.set_fractal_octaves(octaves + 1);
+                p_noise.set_frequency(freq - 0.03);
+
+                let s_value = noise.get_noise(new_x / width as f32, new_y / height as f32);
+                let p_value = p_noise.get_noise(new_x / width as f32, new_y / height as f32);
+
+                let value = (s_value + p_value) / 2.0;
 
                 // adjust noise params
-
-                let cell = Cell::new(Vec3::new(new_x as f32, new_y as f32, 0.0), value);
+                let cell_sprite = Sprite {
+                    color: Color::hsl(150.0, 0.0, value),
+                    custom_size: Some(Vec2::new(space, space)),
+                    ..Default::default()
+                };
+                let cell = Cell::new(Vec3::new(new_x, new_y, 0.0), value, cell_sprite);
 
                 rows.push(cell);
             }
@@ -68,52 +80,55 @@ impl Grid {
 struct Cell {
     posision: Vec3,
     value: f32,
+    sprite: Sprite,
 }
 impl Cell {
-    fn new(pos: Vec3, val: f32) -> Self {
+    fn new(pos: Vec3, val: f32, spr: Sprite) -> Self {
         Self {
             posision: pos,
             value: val,
+            sprite: spr,
         }
     }
 }
 
-fn noise_grid(mut commands: Commands, asst: Res<AssetServer>) {
-    let grass = asst.load("grass.png");
-    let water = asst.load("water.png");
-    let sand = asst.load("sand.png");
-
-    let grid = Grid::create_noise_grid(500, 500, 16.0, 72452, 30, 0.07);
+fn height_map_grid(mut commands: Commands, asst: Res<AssetServer>) {
+    let grid = Grid::create_noise_grid(400, 400, 16.0, 6356227, 20, 0.07);
     for row in grid.cells.iter() {
         for cell in row.iter() {
-            if cell.value > 0.25 {
+            commands.spawn(SpriteBundle {
+                sprite: cell.sprite.clone(),
+                transform: Transform::from_translation(cell.posision),
+                ..Default::default()
+            });
+        }
+    }
+}
+
+fn color_grid(mut commands: Commands, asst_serv: Res<AssetServer>) {
+    let grass_texture = asst_serv.load("grass.png");
+    let sand_texture = asst_serv.load("sand.png");
+    let water_texture = asst_serv.load("water.png");
+
+    let grid = Grid::create_noise_grid(400, 400, 16.0, 6356227, 20, 0.05);
+    for row in grid.cells.iter() {
+        for cell in row.iter() {
+            if cell.value > 0.07 {
                 commands.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::new(16.0, 16.0)),
-                        ..default()
-                    },
-                    texture: grass.clone(),
+                    texture: grass_texture.clone(),
                     transform: Transform::from_translation(cell.posision),
                     ..Default::default()
                 });
             }
-            if cell.value >= 0.23 {
+            if cell.value >= 0.05 {
                 commands.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::new(16.0, 16.0)),
-                        ..default()
-                    },
-                    texture: sand.clone(),
+                    texture: sand_texture.clone(),
                     transform: Transform::from_translation(cell.posision),
                     ..Default::default()
                 });
             } else {
                 commands.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        custom_size: Some(Vec2::new(16.0, 16.0)),
-                        ..default()
-                    },
-                    texture: water.clone(),
+                    texture: water_texture.clone(),
                     transform: Transform::from_translation(cell.posision),
                     ..Default::default()
                 });
@@ -124,6 +139,6 @@ fn noise_grid(mut commands: Commands, asst: Res<AssetServer>) {
 
 impl Plugin for CellGridPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, noise_grid);
+        app.add_systems(Startup, color_grid);
     }
 }

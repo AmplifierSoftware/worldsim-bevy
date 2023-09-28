@@ -4,6 +4,7 @@ use bevy_mod_picking::{prelude::RaycastPickCamera, *};
 use bevy_pancam::*;
 
 mod cell_grid;
+mod planet_gen;
 fn main() {
     println!("Hello, world!");
     App::new()
@@ -21,7 +22,7 @@ fn main() {
                 }),
         )
         .add_plugins(PanCamPlugin::default())
-        .add_plugins(cell_grid::CellGridPlugin)
+        .add_plugins(planet_gen::PlanetPlugin)
         .add_plugins(EguiPlugin)
         .add_systems(Startup, start_world)
         .run()
